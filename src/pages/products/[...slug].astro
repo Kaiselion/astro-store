@@ -33,7 +33,7 @@ const { product, images } = data
 				{
 					product.sizes
 						.split(',')
-						.map((size: unknown) => <li data-size={size}>{size}</li>)
+						.map((size: string) => <li data-size={size}>{size}</li>)
 				}
 			</ul>
 
@@ -44,7 +44,8 @@ const { product, images } = data
 				<button class='btn-quantity'>+</button>
 			</div>
 
-			<button class='mt-5 bg-blue-500 text-white p-3 w-full'
+			<button
+				class='mt-5 bg-blue-500 text-white p-3 w-full disabled:bg-gray-500'
 				>Añadir al carrito</button
 			>
 
@@ -57,47 +58,61 @@ const { product, images } = data
 </MainLayout>
 
 <script>
-	const sizeElements = document.querySelectorAll('li')
+	import { CartCookiesClient } from '@/utils'
+	import { itemsInCart } from '@/store'
+	import { navigate } from 'astro:transitions/client'
 
-	sizeElements.forEach((liElement) => {
-		liElement.addEventListener('click', () => {
-			sizeElements.forEach((s) => s.classList.remove('selected-size'))
-			liElement.classList.add('selected-size')
+	document.addEventListener('astro:page-load', () => {
+		const sizeElements = document.querySelectorAll('li')
+
+		sizeElements.forEach((liElement) => {
+			liElement.addEventListener('click', () => {
+				sizeElements.forEach((s) => s.classList.remove('selected-size'))
+				liElement.classList.add('selected-size')
+			})
 		})
-	})
 
-	const quantityInput = document.querySelector('input') as HTMLInputElement
-	const productIdInput = document.querySelector(
-		'#product-id'
-	) as HTMLInputElement
+		const quantityInput = document.querySelector('input') as HTMLInputElement
+		const productIdInput = document.querySelector(
+			'#product-id'
+		) as HTMLInputElement
 
-	let quantity = 1
-	const [decrementButton, incrementButton, addToCartButton] =
-		document.querySelectorAll('button')
+		let quantity = 1
 
-	incrementButton.addEventListener('click', () => {
-		quantity = Math.min(quantity + 1, 5)
-		quantityInput.value = quantity.toString()
-	})
+		const [decrementButton, incrementButton, addToCartButton] =
+			document.querySelectorAll('button')
 
-	decrementButton.addEventListener('click', () => {
-		quantity = Math.max(quantity - 1, 1)
-		quantityInput.value = quantity.toString()
-	})
+		if (!incrementButton || !quantityInput) return
 
-	addToCartButton.addEventListener('click', () => {
-		const size = document.querySelector('.selected-size')?.textContent
+		incrementButton.addEventListener('click', () => {
+			quantity = Math.min(quantity + 1, 5)
+			quantityInput.value = quantity.toString()
+		})
 
-		if (!size) {
-			return alert('Por favor selecciona una talla')
-		}
+		decrementButton.addEventListener('click', () => {
+			quantity = Math.max(quantity - 1, 1)
+			quantityInput.value = quantity.toString()
+		})
 
-		addToCartButton.disabled = true
+		addToCartButton.addEventListener('click', async () => {
+			const size = document.querySelector('.selected-size')?.textContent
 
-		console.log({
-			id: productIdInput.value,
-			size: size,
-			quantity: quantity
+			if (!size) {
+				return alert('Por favor selecciona una talla')
+			}
+
+			addToCartButton.disabled = true
+
+			const cart = CartCookiesClient.addItem({
+				productId: productIdInput.value,
+				size: size,
+				quantity: quantity
+			})
+
+			itemsInCart.set(cart.length)
+
+			// window.location.href = '/cart'
+			await navigate('/cart')
 		})
 	})
 </script>
@@ -110,6 +125,10 @@ const { product, images } = data
 
 	li {
 		@apply hover:underline cursor-pointer;
+	}
+
+	button {
+		@apply cursor-pointer;
 	}
 
 	.selected-size {
