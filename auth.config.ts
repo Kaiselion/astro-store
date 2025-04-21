@@ -14,8 +14,8 @@ export default defineConfig({
 		}),
 		Credentials({
 			credentials: {
-				email: { label: 'Email', type: 'text' },
-				password: { label: 'Password', type: 'password' }
+				email: { label: 'Correo', type: 'email' },
+				password: { label: 'Contraseña', type: 'password' }
 			},
 			authorize: async ({ email, password }) => {
 				const [user] = await db
@@ -40,6 +40,13 @@ export default defineConfig({
 	],
 
 	callbacks: {
+		jwt: ({ token, user }) => {
+			if (user) {
+				token.user = user
+			}
+
+			return token
+		},
 		async signIn({ user, account }) {
 			// Si el usuario se autentica con Google
 			if (account?.provider === 'google') {
@@ -73,13 +80,6 @@ export default defineConfig({
 				}
 			}
 			return true
-		},
-		jwt: ({ token, user }) => {
-			if (user) {
-				token.user = user
-			}
-
-			return token
 		},
 
 		session: ({ session, token }) => {
